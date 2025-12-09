@@ -596,15 +596,15 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(_isEditing
-                      ? 'Modo edición activado'
+                  content: Text(_i activado'
                       : 'Modo edición desactivado'),
-                  duration: const Duration(seconds: 2),
-                  action: SnackBarAction(
-                    label: 'OK',
-                    onPressed: () {},
-                  ),
-                ),
+                    duration: const Duration(seconds: 2),
+                    action: SnackBarAction(
+                      label: 'OK',
+                      onPressed: () {},
+                    ),
+                    sEditing
+                      ? 'Modo edición   ),
               );
             },
           ),
