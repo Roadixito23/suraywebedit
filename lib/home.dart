@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'theme/app_colors.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({Key? key}) : super(key: key);
@@ -14,9 +15,8 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
   bool _isEditing = false;
   late TabController _tabController;
 
-  // Constantes para uso a lo largo del widget
-  final Color _aysenColor = Colors.blue.shade700;
-  final Color _coyhaiqueCplor = Colors.green.shade700;
+  // Constantes de colores unificados
+  static const Color _primaryColor = AppColors.copper;
 
   @override
   void initState() {
@@ -80,7 +80,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         builder: (context, setState) => AlertDialog(
           title: Text(
             'Agregar nuevo horario',
-            style: TextStyle(color: comuna == 'aysen' ? _aysenColor : _coyhaiqueCplor),
+            style: TextStyle(color: _primaryColor),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -145,14 +145,14 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Horario agregado correctamente'),
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppColors.success,
                       ),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Error: $e'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: AppColors.error,
                       ),
                     );
                   }
@@ -163,7 +163,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: comuna == 'aysen' ? _aysenColor : _coyhaiqueCplor,
+                backgroundColor: _primaryColor,
               ),
               child: const Text('Guardar'),
             ),
@@ -186,7 +186,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         builder: (context, setState) => AlertDialog(
           title: Text(
             'Editar horario',
-            style: TextStyle(color: comuna == 'aysen' ? _aysenColor : _coyhaiqueCplor),
+            style: TextStyle(color: _primaryColor),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -247,14 +247,14 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Horario actualizado correctamente'),
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppColors.success,
                       ),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Error: $e'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: AppColors.error,
                       ),
                     );
                   }
@@ -265,7 +265,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: comuna == 'aysen' ? _aysenColor : _coyhaiqueCplor,
+                backgroundColor: _primaryColor,
               ),
               child: const Text('Actualizar'),
             ),
@@ -282,7 +282,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
       builder: (context) => AlertDialog(
         title: Text(
           'Eliminar horario',
-          style: TextStyle(color: Colors.red.shade700),
+          style: TextStyle(color: AppColors.error),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -315,7 +315,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
             onPressed: () async {
               try {
@@ -324,14 +324,14 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Horario eliminado correctamente'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColors.success,
                   ),
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Error: $e'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: AppColors.error,
                   ),
                 );
               }
@@ -358,7 +358,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
 
         final docs = snapshot.data;
         if (docs == null || docs.isEmpty) {
-          return _buildEmptyCard(title, comuna, dayType, headerColor);
+          return _buildEmptyCard(title, comuna, dayType);
         }
 
         return Card(
@@ -373,9 +373,9 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
               // Encabezado de la tarjeta
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: headerColor,
-                  borderRadius: const BorderRadius.only(
+                decoration: const BoxDecoration(
+                  color: _primaryColor,
+                  borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
                   ),
@@ -433,12 +433,12 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: headerColor.withOpacity(0.1),
+                            color: _primaryColor.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.access_time,
-                            color: headerColor,
+                            color: _primaryColor,
                             size: 20,
                           ),
                         ),
@@ -456,12 +456,12 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: Icon(Icons.edit, color: headerColor),
+                              icon: const Icon(Icons.edit, color: _primaryColor),
                               onPressed: () => _editTimeEntry(comuna, dayType, doc),
                               tooltip: 'Editar',
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(Icons.delete, color: AppColors.error),
                               onPressed: () => _deleteTimeEntry(comuna, doc),
                               tooltip: 'Eliminar',
                             ),
@@ -489,7 +489,9 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const CircularProgressIndicator(),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+            ),
             const SizedBox(height: 12),
             Text(
               'Cargando horarios para $title...',
@@ -506,20 +508,20 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.red.shade50,
+      color: AppColors.error.withOpacity(0.1),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Icon(Icons.error_outline, color: Colors.red.shade700, size: 48),
+            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
             const SizedBox(height: 12),
             Text(
               'Error cargando "$title"',
-              style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
             ),
             Text(
               error,
-              style: TextStyle(color: Colors.red.shade700),
+              style: const TextStyle(color: AppColors.error),
             ),
           ],
         ),
@@ -528,7 +530,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
   }
 
   /// Widget para mostrar cuando no hay horarios
-  Widget _buildEmptyCard(String title, String comuna, String dayType, Color headerColor) {
+  Widget _buildEmptyCard(String title, String comuna, String dayType) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -536,11 +538,11 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Icon(Icons.info_outline, color: headerColor, size: 48),
+            const Icon(Icons.info_outline, color: _primaryColor, size: 48),
             const SizedBox(height: 12),
             Text(
               'No hay horarios disponibles para "$title"',
-              style: TextStyle(color: headerColor, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: _primaryColor, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             if (_isEditing) ...[
@@ -550,7 +552,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 icon: const Icon(Icons.add),
                 label: const Text('Agregar horario'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: headerColor,
+                  backgroundColor: _primaryColor,
                 ),
               ),
             ],
@@ -570,10 +572,10 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         ),
         centerTitle: true,
         elevation: 2,
-        backgroundColor: Colors.blue.shade800,
+        backgroundColor: _primaryColor,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
+          indicatorColor: AppColors.orangeLight,
           tabs: const [
             Tab(
               icon: Icon(Icons.departure_board),
@@ -611,11 +613,11 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
+            colors: [AppColors.bronzeLight, Color(0xFFF9F5F0)],
           ),
         ),
         child: TabBarView(
@@ -629,7 +631,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 children: [
                   // Encabezado informativo
                   Card(
-                    color: _aysenColor.withOpacity(0.1),
+                    color: _primaryColor.withOpacity(0.1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -639,8 +641,8 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: _aysenColor,
+                            decoration: const BoxDecoration(
+                              color: _primaryColor,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -679,9 +681,9 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                   const SizedBox(height: 16),
 
                   // Tarjetas de horarios de Aysén
-                  _buildScheduleCard('Lunes a Viernes', 'aysen', 'lunesViernes', _aysenColor),
-                  _buildScheduleCard('Sábados', 'aysen', 'sabados', _aysenColor),
-                  _buildScheduleCard('Domingos y Feriados', 'aysen', 'domingosFeriados', _aysenColor),
+                  _buildScheduleCard('Lunes a Viernes', 'aysen', 'lunesViernes', _primaryColor),
+                  _buildScheduleCard('Sábados', 'aysen', 'sabados', _primaryColor),
+                  _buildScheduleCard('Domingos y Feriados', 'aysen', 'domingosFeriados', _primaryColor),
                 ],
               ),
             ),
@@ -694,7 +696,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 children: [
                   // Encabezado informativo
                   Card(
-                    color: _coyhaiqueCplor.withOpacity(0.1),
+                    color: _primaryColor.withOpacity(0.1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -704,8 +706,8 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: _coyhaiqueCplor,
+                            decoration: const BoxDecoration(
+                              color: _primaryColor,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -744,9 +746,9 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                   const SizedBox(height: 16),
 
                   // Tarjetas de horarios de Coyhaique
-                  _buildScheduleCard('Lunes a Viernes', 'coyhaique', 'lunesViernes', _coyhaiqueCplor),
-                  _buildScheduleCard('Sábados', 'coyhaique', 'sabados', _coyhaiqueCplor),
-                  _buildScheduleCard('Domingos y Feriados', 'coyhaique', 'domingosFeriados', _coyhaiqueCplor),
+                  _buildScheduleCard('Lunes a Viernes', 'coyhaique', 'lunesViernes', _primaryColor),
+                  _buildScheduleCard('Sábados', 'coyhaique', 'sabados', _primaryColor),
+                  _buildScheduleCard('Domingos y Feriados', 'coyhaique', 'domingosFeriados', _primaryColor),
                 ],
               ),
             ),
