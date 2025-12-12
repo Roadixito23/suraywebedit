@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'theme/app_colors.dart';
+import 'services/auth_service.dart';
+import 'login_page.dart';
 
 class SchedulePage extends StatefulWidget {
-  const SchedulePage({Key? key}) : super(key: key);
+  final AuthService authService;
+
+  const SchedulePage({Key? key, required this.authService}) : super(key: key);
 
   @override
   _SchedulePageState createState() => _SchedulePageState();
@@ -16,7 +20,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
   late TabController _tabController;
 
   // Constantes de colores unificados
-  static const Color _primaryColor = AppColors.copper;
+  static const Color _primaryColor = AppColors.primary;
 
   @override
   void initState() {
@@ -49,24 +53,41 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     return regex.hasMatch(value);
   }
 
-  /// Formatea el texto para asegurar formato HH:MM
-  String _formatTimeInput(String value) {
-    // Elimina todos los caracteres que no sean dígitos
-    String digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
+  /// Formateador de texto mejorado para horarios
+  TextInputFormatter _createTimeInputFormatter() {
+    return TextInputFormatter.withFunction((oldValue, newValue) {
+      // Obtener solo dígitos
+      String newDigits = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+      String oldDigits = oldValue.text.replaceAll(RegExp(r'[^\d]'), '');
 
-    // Límite a 4 dígitos
-    if (digitsOnly.length > 4) {
-      digitsOnly = digitsOnly.substring(0, 4);
-    }
+      // Limitar a 4 dígitos
+      if (newDigits.length > 4) {
+        newDigits = newDigits.substring(0, 4);
+      }
 
-    // Formatea como HH:MM
-    if (digitsOnly.length >= 3) {
-      return '${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2)}';
-    } else if (digitsOnly.length == 2) {
-      return '$digitsOnly:';
-    }
+      // Formatear el texto
+      String formatted = '';
+      if (newDigits.isEmpty) {
+        formatted = '';
+      } else if (newDigits.length <= 2) {
+        formatted = newDigits;
+      } else {
+        formatted = '${newDigits.substring(0, 2)}:${newDigits.substring(2)}';
+      }
 
-    return digitsOnly;
+      // Determinar la posición del cursor
+      int selectionIndex = formatted.length;
+
+      // Si se está borrando y el cursor está justo después del ":", mover el cursor antes del ":"
+      if (newDigits.length < oldDigits.length && newValue.selection.baseOffset == 3 && formatted.length >= 3) {
+        selectionIndex = 2; // Colocar cursor antes del ":"
+      }
+
+      return TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: selectionIndex),
+      );
+    });
   }
 
   /// Agregar un nuevo horario con validación mejorada
@@ -105,15 +126,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 ),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
-                  // Formateador personalizado
-                  TextInputFormatter.withFunction((oldValue, newValue) {
-                    final formatted = _formatTimeInput(newValue.text);
-                    return TextEditingValue(
-                      text: formatted,
-                      selection: TextSelection.collapsed(offset: formatted.length),
-                    );
-                  }),
-                  // Limita a 5 caracteres (HH:MM)
+                  _createTimeInputFormatter(),
                   LengthLimitingTextInputFormatter(5),
                 ],
                 onChanged: (value) {
@@ -211,15 +224,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 ),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
-                  // Formateador personalizado
-                  TextInputFormatter.withFunction((oldValue, newValue) {
-                    final formatted = _formatTimeInput(newValue.text);
-                    return TextEditingValue(
-                      text: formatted,
-                      selection: TextSelection.collapsed(offset: formatted.length),
-                    );
-                  }),
-                  // Limita a 5 caracteres (HH:MM)
+                  _createTimeInputFormatter(),
                   LengthLimitingTextInputFormatter(5),
                 ],
                 onChanged: (value) {
@@ -337,6 +342,406 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
               }
             },
             child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Maneja las selecciones del menú de usuario
+  void _handleUserMenuSelection(String value) {
+    switch (value) {
+      case 'username':
+        // No hacer nada, solo muestra la información
+        break;
+      case 'change_username':
+        _showChangeUsernameDialog();
+        break;
+      case 'change_password':
+        _showChangePasswordDialog();
+        break;
+      case 'add_user':
+        _showAddUserDialog();
+        break;
+      case 'view_users':
+        _showAllUsersDialog();
+        break;
+      case 'logout':
+        _handleLogout();
+        break;
+    }
+  }
+
+  /// Diálogo para cambiar nombre de usuario
+  Future<void> _showChangeUsernameDialog() async {
+    final TextEditingController newUsernameController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cambiar nombre de usuario'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Usuario actual: ${widget.authService.currentUser?['username']}'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: newUsernameController,
+              decoration: const InputDecoration(
+                labelText: 'Nuevo nombre de usuario',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newUsername = newUsernameController.text.trim();
+              if (newUsername.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('El nombre de usuario no puede estar vacío'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              final success = await widget.authService.changeUsername(newUsername);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Nombre de usuario actualizado correctamente'
+                        : 'Error: el nombre de usuario ya existe'),
+                    backgroundColor: success ? AppColors.success : AppColors.error,
+                  ),
+                );
+                if (success) {
+                  setState(() {}); // Actualizar UI
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Cambiar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Diálogo para cambiar contraseña
+  Future<void> _showChangePasswordDialog() async {
+    final TextEditingController currentPasswordController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cambiar contraseña'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Contraseña actual',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Nueva contraseña',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Confirmar nueva contraseña',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (newPasswordController.text != confirmPasswordController.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Las contraseñas no coinciden'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              if (newPasswordController.text.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('La contraseña debe tener al menos 6 caracteres'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              final success = await widget.authService.changePassword(
+                currentPasswordController.text,
+                newPasswordController.text,
+              );
+
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Contraseña actualizada correctamente'
+                        : 'Error: contraseña actual incorrecta'),
+                    backgroundColor: success ? AppColors.success : AppColors.error,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Cambiar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Diálogo para agregar nuevo usuario
+  Future<void> _showAddUserDialog() async {
+    final TextEditingController usernameController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Agregar nuevo usuario'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: usernameController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre de usuario',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Contraseña',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final username = usernameController.text.trim();
+              final password = passwordController.text;
+
+              if (username.isEmpty || password.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Todos los campos son requeridos'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              if (password.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('La contraseña debe tener al menos 6 caracteres'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              final success = await widget.authService.createUser(username, password);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Usuario creado correctamente'
+                        : 'Error: el usuario ya existe'),
+                    backgroundColor: success ? AppColors.success : AppColors.error,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            child: const Text('Crear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Diálogo para ver todos los usuarios
+  Future<void> _showAllUsersDialog() async {
+    final users = await widget.authService.getAllUsers();
+
+    if (!mounted) return;
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Todos los usuarios'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: users.isEmpty
+              ? const Text('No hay usuarios registrados')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: users.length,
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    final isCurrentUser = user['id'] == widget.authService.currentUser?['id'];
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: isCurrentUser ? AppColors.primary : AppColors.secondary,
+                          child: Text(
+                            user['username'][0].toUpperCase(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        title: Text(user['username']),
+                        subtitle: Text(isCurrentUser ? 'Usuario actual' : 'Creado: ${_formatTimestamp(user['createdAt'])}'),
+                        trailing: isCurrentUser
+                            ? const Chip(
+                                label: Text('Tú', style: TextStyle(fontSize: 12)),
+                                backgroundColor: AppColors.primaryLight,
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.delete, color: AppColors.error),
+                                onPressed: () => _confirmDeleteUser(user['id'], user['username']),
+                              ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Confirmar eliminación de usuario
+  Future<void> _confirmDeleteUser(String userId, String username) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar usuario'),
+        content: Text('¿Está seguro de eliminar al usuario "$username"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final success = await widget.authService.deleteUser(userId);
+              if (mounted) {
+                Navigator.pop(context); // Cerrar confirmación
+                Navigator.pop(context); // Cerrar lista de usuarios
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Usuario eliminado correctamente'
+                        : 'Error al eliminar usuario'),
+                    backgroundColor: success ? AppColors.success : AppColors.error,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Formatear timestamp de Firestore
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    try {
+      final dateTime = (timestamp as Timestamp).toDate();
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
+  /// Manejar logout
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Está seguro de cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              widget.authService.logout();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Cerrar sesión'),
           ),
         ],
       ),
@@ -575,7 +980,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         backgroundColor: _primaryColor,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.orangeLight,
+          indicatorColor: AppColors.accent,
           tabs: const [
             Tab(
               icon: Icon(Icons.departure_board),
@@ -610,6 +1015,76 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
               );
             },
           ),
+          // Menú de usuario
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'Gestión de usuario',
+            onSelected: _handleUserMenuSelection,
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'username',
+                child: Row(
+                  children: [
+                    const Icon(Icons.person, color: AppColors.secondary, size: 20),
+                    const SizedBox(width: 12),
+                    Text('Usuario: ${widget.authService.currentUser?['username'] ?? 'N/A'}'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'change_username',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, color: AppColors.secondary, size: 20),
+                    SizedBox(width: 12),
+                    Text('Cambiar nombre de usuario'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'change_password',
+                child: Row(
+                  children: [
+                    Icon(Icons.lock, color: AppColors.secondary, size: 20),
+                    SizedBox(width: 12),
+                    Text('Cambiar contraseña'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'add_user',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_add, color: AppColors.success, size: 20),
+                    SizedBox(width: 12),
+                    Text('Agregar nuevo usuario'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'view_users',
+                child: Row(
+                  children: [
+                    Icon(Icons.group, color: AppColors.secondary, size: 20),
+                    SizedBox(width: 12),
+                    Text('Ver todos los usuarios'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.exit_to_app, color: AppColors.error, size: 20),
+                    SizedBox(width: 12),
+                    Text('Cerrar sesión'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: Container(
@@ -617,7 +1092,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.bronzeLight, Color(0xFFF9F5F0)],
+            colors: [Color(0xFFFFF5EE), Color(0xFFF0F8FF)], // Gradiente suave naranja-azul
           ),
         ),
         child: TabBarView(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'splash_screen.dart';
+import 'login_page.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Horarios Aysén y Coyhaique',
       theme: AppTheme.lightTheme,
-      home: const SplashScreen(),
+      home: const LoginPage(),
     );
   }
 }

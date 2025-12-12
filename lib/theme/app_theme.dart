@@ -5,13 +5,23 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      primaryColor: AppColors.copper,
+      primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.white,
       fontFamily: 'Roboto',
-      
+
+      // Color Scheme
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        secondary: AppColors.secondary,
+        error: AppColors.error,
+        surface: AppColors.white,
+      ),
+
       // AppBar Theme
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.copper,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
         elevation: 2,
         centerTitle: true,
         titleTextStyle: TextStyle(
@@ -21,18 +31,18 @@ class AppTheme {
         ),
         iconTheme: IconThemeData(color: AppColors.white),
       ),
-      
+
       // TabBar Theme
-      tabBarTheme: TabBarThemeData(
-        indicatorColor: AppColors.orangeLight,
+      tabBarTheme: const TabBarThemeData(
+        indicatorColor: AppColors.accent,
         labelColor: AppColors.white,
-        unselectedLabelColor: AppColors.white.withOpacity(0.7),
+        unselectedLabelColor: Color(0xB3FFFFFF), // White con 70% opacidad
       ),
-      
+
       // ElevatedButton Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.copper,
+          backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -40,15 +50,15 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
       ),
-      
+
       // TextButton Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.copper,
+          foregroundColor: AppColors.secondary,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
       ),
-      
+
       // Card Theme
       cardTheme: CardThemeData(
         color: AppColors.white,
@@ -57,7 +67,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      
+
       // TextField Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -73,12 +83,12 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.copper, width: 2),
+          borderSide: const BorderSide(color: AppColors.secondary, width: 2),
         ),
         labelStyle: const TextStyle(color: AppColors.grey),
-        prefixIconColor: AppColors.copper,
+        prefixIconColor: AppColors.secondary,
       ),
-      
+
       // Dialog Theme
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.white,
@@ -86,10 +96,16 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
-      
+
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.copper,
+        color: AppColors.primary,
+      ),
+
+      // Floating Action Button Theme
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
       ),
     );
   }

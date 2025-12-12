@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="Suray Web Edit"
+        android:label="Editor de Horarios"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
