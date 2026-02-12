@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:suraywebedit/services/auth_service.dart';
-import 'package:suraywebedit/home.dart';
-import 'package:suraywebedit/theme/app_colors.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../data/services/auth_service.dart';
+import '../../../schedule/presentation/pages/schedule_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
