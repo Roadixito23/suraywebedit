@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/constants/app_breakpoints.dart';
 import '../../../auth/data/services/auth_service.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import '../widgets/schedule_card.dart';
+import '../layouts/desktop_schedule_layout.dart';
+import '../layouts/mobile_schedule_layout.dart';
 import '../widgets/user_dialogs.dart';
 
 class SchedulePage extends StatefulWidget {
   final AuthService authService;
 
-  const SchedulePage({Key? key, required this.authService}) : super(key: key);
+  const SchedulePage({super.key, required this.authService});
 
   @override
   State<SchedulePage> createState() => _SchedulePageState();
@@ -20,9 +22,6 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
   late final FirebaseFirestore _firestore;
   bool _isEditing = false;
   late TabController _tabController;
-
-  // Constantes de colores unificados
-  static const Color _primaryColor = AppColors.primary;
 
   @override
   void initState() {
@@ -50,7 +49,6 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
 
   /// Validación de formato HH:MM
   bool _isTimeFormatValid(String value) {
-    // Verifica el formato HH:MM con expresión regular
     final RegExp regex = RegExp(r'^([0-1][0-9]|2[0-3]):([0-5][0-9])$');
     return regex.hasMatch(value);
   }
@@ -58,16 +56,13 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
   /// Formateador de texto mejorado para horarios
   TextInputFormatter _createTimeInputFormatter() {
     return TextInputFormatter.withFunction((oldValue, newValue) {
-      // Obtener solo dígitos
       String newDigits = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
       String oldDigits = oldValue.text.replaceAll(RegExp(r'[^\d]'), '');
 
-      // Limitar a 4 dígitos
       if (newDigits.length > 4) {
         newDigits = newDigits.substring(0, 4);
       }
 
-      // Formatear el texto
       String formatted = '';
       if (newDigits.isEmpty) {
         formatted = '';
@@ -77,12 +72,10 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         formatted = '${newDigits.substring(0, 2)}:${newDigits.substring(2)}';
       }
 
-      // Determinar la posición del cursor
       int selectionIndex = formatted.length;
 
-      // Si se está borrando y el cursor está justo después del ":", mover el cursor antes del ":"
       if (newDigits.length < oldDigits.length && newValue.selection.baseOffset == 3 && formatted.length >= 3) {
-        selectionIndex = 2; // Colocar cursor antes del ":"
+        selectionIndex = 2;
       }
 
       return TextEditingValue(
@@ -100,31 +93,63 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     return showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(
-            'Agregar nuevo horario',
-            style: TextStyle(color: _primaryColor),
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add_alarm_rounded, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              const Text('Agregar horario'),
+            ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Horario para ${comuna == 'aysen' ? 'Aysén' : 'Coyhaique'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_on_rounded, size: 16, color: AppColors.secondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      comuna == 'aysen' ? 'Aysén' : 'Coyhaique',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               TextField(
                 controller: timeController,
                 decoration: InputDecoration(
-                  labelText: 'Formato HH:MM',
+                  labelText: 'Hora de salida',
                   hintText: 'Ej: 08:30',
+                  helperText: 'Formato: HH:MM (24 horas)',
                   errorText: timeController.text.isNotEmpty && !isValidFormat
-                      ? 'Formato inválido. Use HH:MM (ej: 09:30)'
+                      ? 'Formato inválido'
                       : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: const Icon(Icons.access_time),
+                  prefixIcon: const Icon(Icons.access_time_rounded),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                 ),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
@@ -132,7 +157,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                   LengthLimitingTextInputFormatter(5),
                 ],
                 onChanged: (value) {
-                  setState(() {
+                  setDialogState(() {
                     isValidFormat = _isTimeFormatValid(value);
                   });
                 },
@@ -142,45 +167,31 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
+              child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade600)),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final String timeValue = timeController.text;
-                if (timeValue.isNotEmpty && _isTimeFormatValid(timeValue)) {
-                  try {
-                    await _firestore
-                        .collection('horarios')
-                        .doc(comuna)
-                        .collection(dayType)
-                        .add({
-                      'time': timeValue,
-                    });
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Horario agregado correctamente'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                  }
-                } else {
-                  setState(() {
-                    isValidFormat = false;
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primaryColor,
+            FilledButton.icon(
+              onPressed: isValidFormat
+                  ? () async {
+                      final String timeValue = timeController.text;
+                      try {
+                        await _firestore
+                            .collection('horarios')
+                            .doc(comuna)
+                            .collection(dayType)
+                            .add({'time': timeValue});
+                        Navigator.pop(context);
+                        _showSuccessSnackBar('Horario agregado correctamente');
+                      } catch (e) {
+                        _showErrorSnackBar('Error: $e');
+                      }
+                    }
+                  : null,
+              icon: const Icon(Icons.check_rounded, size: 18),
+              label: const Text('Guardar'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Guardar'),
             ),
           ],
         ),
@@ -188,7 +199,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     );
   }
 
-  /// Editar un horario existente con validación mejorada
+  /// Editar un horario existente
   Future<void> _editTimeEntry(String comuna, String dayType, DocumentSnapshot doc) async {
     final TextEditingController timeController = TextEditingController(
       text: (doc.data() as Map<String, dynamic>)['time'] as String,
@@ -198,31 +209,63 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     return showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(
-            'Editar horario',
-            style: TextStyle(color: _primaryColor),
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.edit_rounded, color: AppColors.secondary),
+              ),
+              const SizedBox(width: 12),
+              const Text('Editar horario'),
+            ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Horario para ${comuna == 'aysen' ? 'Aysén' : 'Coyhaique'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_on_rounded, size: 16, color: AppColors.secondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      comuna == 'aysen' ? 'Aysén' : 'Coyhaique',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               TextField(
                 controller: timeController,
                 decoration: InputDecoration(
-                  labelText: 'Formato HH:MM',
+                  labelText: 'Hora de salida',
                   hintText: 'Ej: 08:30',
+                  helperText: 'Formato: HH:MM (24 horas)',
                   errorText: timeController.text.isNotEmpty && !isValidFormat
-                      ? 'Formato inválido. Use HH:MM (ej: 09:30)'
+                      ? 'Formato inválido'
                       : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: const Icon(Icons.access_time),
+                  prefixIcon: const Icon(Icons.access_time_rounded),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                 ),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
@@ -230,7 +273,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                   LengthLimitingTextInputFormatter(5),
                 ],
                 onChanged: (value) {
-                  setState(() {
+                  setDialogState(() {
                     isValidFormat = _isTimeFormatValid(value);
                   });
                 },
@@ -240,41 +283,27 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
+              child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade600)),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final String timeValue = timeController.text;
-                if (timeValue.isNotEmpty && _isTimeFormatValid(timeValue)) {
-                  try {
-                    await doc.reference.update({
-                      'time': timeValue,
-                    });
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Horario actualizado correctamente'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                  }
-                } else {
-                  setState(() {
-                    isValidFormat = false;
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primaryColor,
+            FilledButton.icon(
+              onPressed: isValidFormat
+                  ? () async {
+                      final String timeValue = timeController.text;
+                      try {
+                        await doc.reference.update({'time': timeValue});
+                        Navigator.pop(context);
+                        _showSuccessSnackBar('Horario actualizado correctamente');
+                      } catch (e) {
+                        _showErrorSnackBar('Error: $e');
+                      }
+                    }
+                  : null,
+              icon: const Icon(Icons.check_rounded, size: 18),
+              label: const Text('Actualizar'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Actualizar'),
             ),
           ],
         ),
@@ -284,33 +313,60 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
 
   /// Eliminar un horario
   Future<void> _deleteTimeEntry(String comuna, DocumentSnapshot doc) async {
+    final time = (doc.data() as Map<String, dynamic>)['time'];
+    
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Eliminar horario',
-          style: TextStyle(color: AppColors.error),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+            ),
+            const SizedBox(width: 12),
+            const Text('Eliminar horario'),
+          ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.amber,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '¿Está seguro de eliminar el horario ${(doc.data() as Map<String, dynamic>)['time']}?',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Esta acción no se puede deshacer',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.warning,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '¿Eliminar el horario $time?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Esta acción no se puede deshacer',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -318,34 +374,62 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade600)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
+          FilledButton.icon(
             onPressed: () async {
               try {
                 await doc.reference.delete();
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Horario eliminado correctamente'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
+                _showSuccessSnackBar('Horario eliminado correctamente');
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: $e'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
+                _showErrorSnackBar('Error: $e');
               }
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.delete_rounded, size: 18),
+            label: const Text('Eliminar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(message),
+          ],
+        ),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_rounded, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -354,7 +438,6 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
   void _handleUserMenuSelection(String value) {
     switch (value) {
       case 'username':
-        // No hacer nada, solo muestra la información
         break;
       case 'change_username':
         UserDialogs.showChangeUsernameDialog(context, widget.authService, () => setState(() {}));
@@ -379,14 +462,28 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Está seguro de cerrar sesión?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.logout_rounded, color: AppColors.error),
+            ),
+            const SizedBox(width: 12),
+            const Text('Cerrar sesión'),
+          ],
+        ),
+        content: const Text('¿Está seguro de que desea cerrar sesión?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade600)),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () {
               widget.authService.logout();
               Navigator.of(context).pushAndRemoveUntil(
@@ -394,7 +491,10 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
                 (route) => false,
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             child: const Text('Cerrar sesión'),
           ),
         ],
@@ -404,308 +504,351 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Horarios Aysén y Coyhaique',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        elevation: 2,
-        backgroundColor: _primaryColor,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.accent,
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.departure_board),
-              text: 'Aysén',
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= AppBreakpoints.tablet;
+        
+        return Scaffold(
+          appBar: _buildAppBar(isDesktop),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFFFFFAF8),
+                  const Color(0xFFF5F9FF),
+                  Colors.grey.shade50,
+                ],
+              ),
             ),
-            Tab(
-              icon: Icon(Icons.departure_board),
-              text: 'Coyhaique',
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Tab de Aysén
+                isDesktop
+                    ? DesktopScheduleLayout(
+                        comuna: 'aysen',
+                        comunaDisplayName: 'Aysén',
+                        destinoDisplayName: 'Coyhaique',
+                        isEditing: _isEditing,
+                        streamBuilder: _timesDocsStream,
+                        onAdd: _addTimeEntry,
+                        onEdit: _editTimeEntry,
+                        onDelete: _deleteTimeEntry,
+                      )
+                    : MobileScheduleLayout(
+                        comuna: 'aysen',
+                        comunaDisplayName: 'Aysén',
+                        destinoDisplayName: 'Coyhaique',
+                        isEditing: _isEditing,
+                        streamBuilder: _timesDocsStream,
+                        onAdd: _addTimeEntry,
+                        onEdit: _editTimeEntry,
+                        onDelete: _deleteTimeEntry,
+                      ),
+
+                // Tab de Coyhaique
+                isDesktop
+                    ? DesktopScheduleLayout(
+                        comuna: 'coyhaique',
+                        comunaDisplayName: 'Coyhaique',
+                        destinoDisplayName: 'Aysén',
+                        isEditing: _isEditing,
+                        streamBuilder: _timesDocsStream,
+                        onAdd: _addTimeEntry,
+                        onEdit: _editTimeEntry,
+                        onDelete: _deleteTimeEntry,
+                      )
+                    : MobileScheduleLayout(
+                        comuna: 'coyhaique',
+                        comunaDisplayName: 'Coyhaique',
+                        destinoDisplayName: 'Aysén',
+                        isEditing: _isEditing,
+                        streamBuilder: _timesDocsStream,
+                        onAdd: _addTimeEntry,
+                        onEdit: _editTimeEntry,
+                        onDelete: _deleteTimeEntry,
+                      ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(bool isDesktop) {
+    return AppBar(
+      elevation: 0,
+      scrolledUnderElevation: 2,
+      backgroundColor: AppColors.primary,
+      foregroundColor: Colors.white,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.directions_bus_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Horarios',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Colors.white,
+            ),
+          ),
+          if (isDesktop) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Panel Admin',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ],
-        ),
-        actions: [
-          // Botón para alternar modo edición
-          IconButton(
-            icon: Icon(_isEditing ? Icons.save : Icons.edit),
-            tooltip: _isEditing ? 'Terminar edición' : 'Editar horarios',
-            onPressed: () {
-              setState(() {
-                _isEditing = !_isEditing;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_isEditing
-                      ? 'Modo edición activado'
-                      : 'Modo edición desactivado'),
-                  duration: const Duration(seconds: 2),
-                  action: SnackBarAction(
-                    label: 'OK',
-                    onPressed: () {},
-                  ),
-                ),
-              );
-            },
+        ],
+      ),
+      centerTitle: false,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: Container(
+          margin: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 24 : 16,
+            vertical: 8,
           ),
-          // Menú de usuario
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.account_circle),
-            tooltip: 'Gestión de usuario',
-            onSelected: _handleUserMenuSelection,
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'username',
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            indicator: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
+              ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.grey.shade600,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            tabs: const [
+              Tab(
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.person, color: AppColors.secondary, size: 20),
-                    const SizedBox(width: 12),
-                    Text('Usuario: ${widget.authService.currentUser?['username'] ?? 'N/A'}'),
+                    Icon(Icons.location_on_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text('Aysén'),
                   ],
                 ),
               ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'change_username',
+              Tab(
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.edit, color: AppColors.secondary, size: 20),
-                    SizedBox(width: 12),
-                    Text('Cambiar nombre de usuario'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'change_password',
-                child: Row(
-                  children: [
-                    Icon(Icons.lock, color: AppColors.secondary, size: 20),
-                    SizedBox(width: 12),
-                    Text('Cambiar contraseña'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'add_user',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_add, color: AppColors.success, size: 20),
-                    SizedBox(width: 12),
-                    Text('Agregar nuevo usuario'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'view_users',
-                child: Row(
-                  children: [
-                    Icon(Icons.group, color: AppColors.secondary, size: 20),
-                    SizedBox(width: 12),
-                    Text('Ver todos los usuarios'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.exit_to_app, color: AppColors.error, size: 20),
-                    SizedBox(width: 12),
-                    Text('Cerrar sesión'),
+                    Icon(Icons.location_on_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text('Coyhaique'),
                   ],
                 ),
               ),
             ],
           ),
-        ],
+        ),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFF5EE), Color(0xFFF0F8FF)], // Gradiente suave naranja-azul
+      actions: [
+        // Indicador de modo edición
+        if (_isEditing)
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.edit_rounded, size: 16, color: AppColors.warning),
+                SizedBox(width: 6),
+                Text(
+                  'Editando',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        
+        // Botón de edición
+        Tooltip(
+          message: _isEditing ? 'Guardar cambios' : 'Editar horarios',
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _isEditing = !_isEditing;
+                });
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(
+                          _isEditing ? Icons.edit_rounded : Icons.check_rounded,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(_isEditing
+                            ? 'Modo edición activado'
+                            : 'Cambios guardados'),
+                      ],
+                    ),
+                    backgroundColor: _isEditing ? AppColors.warning : AppColors.success,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.all(16),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: _isEditing
+                      ? AppColors.success
+                      : Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _isEditing ? Icons.check_rounded : Icons.edit_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
           ),
         ),
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            // Tab de Aysén
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        
+        // Menú de usuario
+        PopupMenuButton<String>(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.person_rounded,
+              color: AppColors.primary,
+              size: 22,
+            ),
+          ),
+          tooltip: 'Menú de usuario',
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          offset: const Offset(0, 50),
+          onSelected: _handleUserMenuSelection,
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'username',
+              enabled: false,
+              child: Row(
                 children: [
-                  // Encabezado informativo
-                  Card(
-                    color: _primaryColor.withOpacity(0.1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: AppColors.primary,
+                    child: Text(
+                      (widget.authService.currentUser?['username'] ?? 'U')[0].toUpperCase(),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: _primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.location_on,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Salidas desde Aysén',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Horarios de buses con destino a Coyhaique',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.authService.currentUser?['username'] ?? 'Usuario',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Tarjetas de horarios de Aysén
-                  ScheduleCard(
-                    title: 'Lunes a Viernes',
-                    stream: _timesDocsStream('aysen', 'lunesViernes'),
-                    isEditing: _isEditing,
-                    onAdd: () => _addTimeEntry('aysen', 'lunesViernes'),
-                    onEdit: (doc) => _editTimeEntry('aysen', 'lunesViernes', doc),
-                    onDelete: (doc) => _deleteTimeEntry('aysen', doc),
-                  ),
-                  ScheduleCard(
-                    title: 'Sábados',
-                    stream: _timesDocsStream('aysen', 'sabados'),
-                    isEditing: _isEditing,
-                    onAdd: () => _addTimeEntry('aysen', 'sabados'),
-                    onEdit: (doc) => _editTimeEntry('aysen', 'sabados', doc),
-                    onDelete: (doc) => _deleteTimeEntry('aysen', doc),
-                  ),
-                  ScheduleCard(
-                    title: 'Domingos y Feriados',
-                    stream: _timesDocsStream('aysen', 'domingosFeriados'),
-                    isEditing: _isEditing,
-                    onAdd: () => _addTimeEntry('aysen', 'domingosFeriados'),
-                    onEdit: (doc) => _editTimeEntry('aysen', 'domingosFeriados', doc),
-                    onDelete: (doc) => _deleteTimeEntry('aysen', doc),
+                      Text(
+                        'Administrador',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
-            // Tab de Coyhaique
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Encabezado informativo
-                  Card(
-                    color: _primaryColor.withOpacity(0.1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: _primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.location_on,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Salidas desde Coyhaique',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Horarios de buses con destino a Aysén',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Tarjetas de horarios de Coyhaique
-                  ScheduleCard(
-                    title: 'Lunes a Viernes',
-                    stream: _timesDocsStream('coyhaique', 'lunesViernes'),
-                    isEditing: _isEditing,
-                    onAdd: () => _addTimeEntry('coyhaique', 'lunesViernes'),
-                    onEdit: (doc) => _editTimeEntry('coyhaique', 'lunesViernes', doc),
-                    onDelete: (doc) => _deleteTimeEntry('coyhaique', doc),
-                  ),
-                  ScheduleCard(
-                    title: 'Sábados',
-                    stream: _timesDocsStream('coyhaique', 'sabados'),
-                    isEditing: _isEditing,
-                    onAdd: () => _addTimeEntry('coyhaique', 'sabados'),
-                    onEdit: (doc) => _editTimeEntry('coyhaique', 'sabados', doc),
-                    onDelete: (doc) => _deleteTimeEntry('coyhaique', doc),
-                  ),
-                  ScheduleCard(
-                    title: 'Domingos y Feriados',
-                    stream: _timesDocsStream('coyhaique', 'domingosFeriados'),
-                    isEditing: _isEditing,
-                    onAdd: () => _addTimeEntry('coyhaique', 'domingosFeriados'),
-                    onEdit: (doc) => _editTimeEntry('coyhaique', 'domingosFeriados', doc),
-                    onDelete: (doc) => _deleteTimeEntry('coyhaique', doc),
-                  ),
-                ],
-              ),
-            ),
+            const PopupMenuDivider(),
+            _buildMenuItem('change_username', Icons.badge_outlined, 'Cambiar usuario', AppColors.secondary),
+            _buildMenuItem('change_password', Icons.lock_outline_rounded, 'Cambiar contraseña', AppColors.secondary),
+            const PopupMenuDivider(),
+            _buildMenuItem('add_user', Icons.person_add_outlined, 'Agregar usuario', AppColors.success),
+            _buildMenuItem('view_users', Icons.group_outlined, 'Ver usuarios', AppColors.secondary),
+            const PopupMenuDivider(),
+            _buildMenuItem('logout', Icons.logout_rounded, 'Cerrar sesión', AppColors.error),
           ],
         ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String text, Color color) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Text(text),
+        ],
       ),
     );
   }

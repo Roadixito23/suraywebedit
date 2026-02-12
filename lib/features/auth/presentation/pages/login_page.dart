@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/services/auth_service.dart';
-import '../../../schedule/presentation/pages/schedule_page.dart';
+import '../../../dashboard/presentation/pages/dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -60,7 +60,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     if (success) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => SchedulePage(authService: _authService),
+          builder: (context) => DashboardPage(authService: _authService),
         ),
       );
     } else {
