@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/constants/app_breakpoints.dart';
 import '../../../auth/data/services/auth_service.dart';
 import '../../../auth/presentation/pages/login_page.dart';
@@ -10,6 +11,7 @@ import '../layouts/mobile_dashboard_layout.dart';
 import '../layouts/desktop_dashboard_layout.dart';
 import '../widgets/dashboard_cards.dart';
 import '../../data/services/audit_service.dart';
+import '../../data/services/statistics_service.dart';
 import 'audit_page.dart';
 
 /// Página principal del Dashboard con layouts responsivos
@@ -26,9 +28,10 @@ class _DashboardPageState extends State<DashboardPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final FirebaseFirestore _firestore;
   final AuditService _auditService = AuditService();
-  
+  final StatisticsService _statisticsService = StatisticsService();
+
   // Datos del dashboard
-  int _visitsCount = 247;
+  int _visitsCount = 0;
   int _dailyDepartures = 42;
   bool _isDbConnected = true;
   String _lastDbCheck = 'Hace 2 min';
@@ -45,6 +48,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _checkDbConnection();
     _loadDashboardData();
     _loadAuditLogs();
+    _loadVisitasHoy();
   }
 
   /// Cargar logs de auditoría desde Firebase
@@ -68,10 +72,21 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  /// Cargar total de visitas desde Firestore (estadisticas/visitas)
+  Future<void> _loadVisitasHoy() async {
+    final count = await _statisticsService.getVisitas();
+    if (mounted) {
+      setState(() {
+        _visitsCount = count;
+      });
+    }
+  }
+
   /// Verificar conexión a Firebase
   Future<void> _checkDbConnection() async {
     try {
-      await _firestore.collection('horarios').limit(1).get();
+      // Usamos estadisticas/visitas que tiene lectura permitida
+      await _firestore.collection('estadisticas').doc('visitas').get();
       if (mounted) {
         setState(() {
           _isDbConnected = true;
@@ -90,27 +105,35 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// Cargar datos del dashboard desde Firestore
   Future<void> _loadDashboardData() async {
-    // En producción, aquí cargarías datos reales
-    // Por ahora usamos datos simulados
     try {
-      // Contar salidas programadas para hoy
+      // Determinar subcollección según el día actual
+      final dayOfWeek = DateTime.now().weekday;
+      final String dayType;
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        dayType = 'weekday';           // Lunes a Viernes
+      } else if (dayOfWeek == 6) {
+        dayType = 'saturday';          // Sábado
+      } else {
+        dayType = 'domingosFeriados';  // Domingo
+      }
+
       int departures = 0;
-      for (String comuna in ['aysen', 'coyhaique', 'limache']) {
-        final weekdayDocs = await _firestore
+      for (final comuna in ['aysen', 'coyhaique', 'limache']) {
+        final docs = await _firestore
             .collection('horarios')
             .doc(comuna)
-            .collection('weekday')
+            .collection(dayType)
             .get();
-        departures += weekdayDocs.docs.length;
+        departures += docs.docs.length;
       }
-      
+
       if (mounted) {
         setState(() {
           _dailyDepartures = departures;
         });
       }
     } catch (e) {
-      // Mantener datos simulados si hay error
+      // Mantener valor anterior si hay error
     }
   }
 
@@ -318,6 +341,8 @@ class _DashboardPageState extends State<DashboardPage> {
           onPressed: () async {
             await _checkDbConnection();
             await _loadDashboardData();
+            await _loadAuditLogs();
+            await _loadVisitasHoy();
           },
         ),
         const SizedBox(width: 4),
@@ -373,6 +398,26 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
       actions: [
+        // Toggle modo oscuro/claro
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeNotifier,
+          builder: (context, themeMode, _) {
+            final isDark = themeMode == ThemeMode.dark;
+            return IconButton(
+              icon: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                color: Colors.white,
+              ),
+              tooltip: isDark ? 'Modo claro' : 'Modo oscuro',
+              onPressed: () {
+                themeNotifier.value =
+                    isDark ? ThemeMode.light : ThemeMode.dark;
+              },
+            );
+          },
+        ),
+        const SizedBox(width: 4),
+
         // Botón de horarios
         TextButton.icon(
           onPressed: _navigateToSchedules,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_notifier.dart';
 import '../widgets/dashboard_cards.dart';
 
 /// Layout del dashboard para dispositivos móviles
@@ -187,7 +188,8 @@ class DashboardDrawer extends StatelessWidget {
                     onSchedules();
                   },
                 ),
-                
+                _buildThemeToggleItem(),
+
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Divider(),
@@ -252,6 +254,59 @@ class DashboardDrawer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildThemeToggleItem() {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, themeMode, _) {
+        final isDark = themeMode == ThemeMode.dark;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () {
+                themeNotifier.value =
+                    isDark ? ThemeMode.light : ThemeMode.dark;
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      color: Colors.grey.shade600,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 14),
+                    Text(
+                      isDark ? 'Modo claro' : 'Modo oscuro',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.darkGrey,
+                      ),
+                    ),
+                    const Spacer(),
+                    Switch(
+                      value: isDark,
+                      onChanged: (value) {
+                        themeNotifier.value =
+                            value ? ThemeMode.dark : ThemeMode.light;
+                      },
+                      activeColor: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Denegar por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Colección de auditoría
+    match /audit_logs/{logId} {
+      allow read: if true; // Cambiar a request.auth != null cuando implementes autenticación real
+      allow write: if true; // Cambiar a request.auth != null cuando implementes autenticación real
+    }
+
+    // Colección de feriados - gestión de días festivos por año
+    match /feriados/{year} {
+      allow read: if true;
+      allow write: if true; // Cambiar a request.auth != null cuando implementes autenticación real
+    }
+
+    // Horarios regulares: lectura pública, escritura permitida (panel admin)
+    match /horarios/{region} {
+      allow read, write: if true;
+    }
+
+    match /horarios/{region}/{dayType}/{docId} {
+      allow read, write: if true;
+    }
+
+    // Colección de horarios especiales de feriados
+    match /horarios_especiales_feriados/{year}/{document=**} {
+      allow read: if true;
+      allow write: if true; // Cambiar a request.auth != null cuando implementes autenticación real
+    }
+
+    // Estadísticas: lectura pública, escritura restringida a los campos permitidos
+    match /estadisticas/visitas {
+      allow read: if true;
+      allow write: if request.resource.data.keys().hasOnly(['cantidadVisitas', 'ultimaActualizacion'])
+                   && request.resource.data.cantidadVisitas is int;
+    }
+
+    // Usuarios administradores
+    match /admin_users/{userId} {
+      allow read, write: if true; // Cambiar a request.auth != null cuando implementes autenticación real
+    }
+  }
+}
